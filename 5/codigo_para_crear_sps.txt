@@ -1,0 +1,139 @@
+-- 1. Aplicar descuento por editorial (porcentaje)
+CREATE OR REPLACE FUNCTION aplicar_descuento_editorial(
+    p_editorial TEXT,
+    p_descuento NUMERIC
+)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE books
+    SET price = price * (1 - p_descuento)
+    WHERE publisher_id IN (
+        SELECT id FROM publishers WHERE name ILIKE p_editorial
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2. Consultar stock por ISBN
+CREATE OR REPLACE FUNCTION consultar_stock_por_isbn(
+    p_isbn TEXT
+)
+RETURNS INTEGER AS $$
+DECLARE
+    v_stock INTEGER;
+BEGIN
+    SELECT quantity INTO v_stock
+    FROM books
+    WHERE isbn = p_isbn;
+
+    RETURN v_stock;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 3. Consultar precio por ISBN
+CREATE OR REPLACE FUNCTION consultar_precio_por_isbn(
+    p_isbn TEXT
+)
+RETURNS NUMERIC AS $$
+DECLARE
+    v_precio NUMERIC;
+BEGIN
+    SELECT price INTO v_precio
+    FROM books
+    WHERE isbn = p_isbn;
+
+    RETURN v_precio;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 4. Agregar stock (ISBN + cantidad)
+CREATE OR REPLACE FUNCTION agregar_stock(
+    p_isbn TEXT,
+    p_cantidad INT
+)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE books
+    SET quantity = quantity + p_cantidad
+    WHERE isbn = p_isbn;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 5. Generar orden de compra (stock < X) [JSON]
+CREATE OR REPLACE FUNCTION generar_orden_compra(
+    p_stock_min INT,
+    p_author_name TEXT DEFAULT NULL
+)
+RETURNS JSON AS $$
+BEGIN
+    RETURN (
+        SELECT json_agg(result)
+        FROM (
+            SELECT 
+                b.id AS book_id,
+                b.title,
+                b.isbn,
+                b.quantity,
+                b.price,
+                p.name AS publisher,
+                string_agg(a.name, ', ') AS authors
+            FROM books b
+            JOIN publishers p ON b.publisher_id = p.id
+            JOIN book_authors ba ON ba.book_id = b.id
+            JOIN authors a ON a.id = ba.author_id
+            WHERE b.quantity < p_stock_min
+              AND (
+                  p_author_name IS NULL
+                  OR EXISTS (
+                      SELECT 1
+                      FROM book_authors ba2
+                      JOIN authors a2 ON a2.id = ba2.author_id
+                      WHERE ba2.book_id = b.id AND a2.name ILIKE p_author_name
+                  )
+              )
+            GROUP BY b.id, p.name
+        ) AS result
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- 6. Buscar libros por múltiples criterios [JSON]
+CREATE OR REPLACE FUNCTION buscar_libros(
+    p_titulo TEXT DEFAULT NULL,
+    p_autor TEXT DEFAULT NULL,
+    p_editorial TEXT DEFAULT NULL,
+    p_stock_min INT DEFAULT NULL,
+    p_stock_max INT DEFAULT NULL,
+    p_precio_min NUMERIC DEFAULT NULL,
+    p_precio_max NUMERIC DEFAULT NULL
+)
+RETURNS JSON AS $$
+BEGIN
+    RETURN (
+        SELECT json_agg(result)
+        FROM (
+            SELECT 
+                b.id AS book_id,
+                b.title,
+                b.isbn,
+                b.quantity,
+                b.price,
+                p.name AS publisher,
+                string_agg(a.name, ', ') AS authors
+            FROM books b
+            JOIN publishers p ON b.publisher_id = p.id
+            JOIN book_authors ba ON ba.book_id = b.id
+            JOIN authors a ON a.id = ba.author_id
+            WHERE
+                (p_titulo IS NULL OR b.title ILIKE '%' || p_titulo || '%')
+                AND (p_autor IS NULL OR a.name ILIKE '%' || p_autor || '%')
+                AND (p_editorial IS NULL OR p.name ILIKE '%' || p_editorial || '%')
+                AND (p_stock_min IS NULL OR b.quantity >= p_stock_min)
+                AND (p_stock_max IS NULL OR b.quantity <= p_stock_max)
+                AND (p_precio_min IS NULL OR b.price >= p_precio_min)
+                AND (p_precio_max IS NULL OR b.price <= p_precio_max)
+            GROUP BY b.id, p.name
+        ) AS result
+    );
+END;
+$$ LANGUAGE plpgsql;
+

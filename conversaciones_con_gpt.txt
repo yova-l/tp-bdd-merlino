@@ -1,0 +1,38 @@
+1)Creacion del dataset consumiendo la API de Open Library
+* https://chatgpt.com/share/683608b1-4554-8006-b477-ed6629a6fbad
+
+2) Intento de normalizacion de dataset automatico (hecho por la IA, sin generar scripts manuales); Parcialmente exitoso. Dado que para el presente trabajo no importa si realmente coinciden los autores, ni otros asuntos relacionados a la integridad de los datos, se procedera con el dataset como esta.
+* https://chatgpt.com/share/68388a4e-02b4-8006-9c9d-fb3a1952d759
+
+3) Creacion de scripts de insercion y creacion de bdd
+* https://chatgpt.com/share/683b4e0a-d410-8006-b834-3587096865ce
+
+4) Test ping a bbdd
+* https://chatgpt.com/share/683b4e0a-d410-8006-b834-3587096865ce
+
+5) Store procedures
+* https://chatgpt.com/share/683cd4bd-67a8-8006-9bb7-9648558dfebd
+
+6) Test store procedures
+* https://chatgpt.com/share/683cd4bd-67a8-8006-9bb7-9648558dfebd
+
+7) Backend
+
+
+8) Test backend
+
+9) Front 
+
+10) Test front
+
+11) ngrok
+
+
+
+
+
+https://openlibrary.org/developers/dumps
+
+https://openlibrary.org/authors/OL23919A/works.json
+
+https://fastapi.tiangolo.com/#example
